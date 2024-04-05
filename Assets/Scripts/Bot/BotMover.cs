@@ -19,24 +19,7 @@ public class BotMover : MonoBehaviour
         yield return StartCoroutine(Move(Vector3.back, _reverseDistance));
     }
 
-    private IEnumerator MoveForward(float distance)
-    {
-        yield return StartCoroutine(Move(Vector3.forward, distance));
-    }
-
-    private IEnumerator Move(Vector3 direction, float distance)
-    {
-
-        while (distance > 0)
-        {
-            float deltaDistance = _movingSpeed * Time.deltaTime;
-            transform.Translate(direction * deltaDistance);
-            distance -= deltaDistance;
-            yield return null;
-        }
-    }
-
-    private IEnumerator TurnTo(Transform target)
+    public IEnumerator TurnTo(Transform target)
     {
         float targetYRotation = Quaternion.LookRotation(target.position - transform.position).eulerAngles.y;
         float currentYRotation = transform.rotation.eulerAngles.y;
@@ -48,4 +31,21 @@ public class BotMover : MonoBehaviour
             yield return null;
         }        
     }
+
+    private IEnumerator MoveForward(float distance)
+    {
+        yield return StartCoroutine(Move(Vector3.forward, distance));
+    }
+
+    private IEnumerator Move(Vector3 direction, float distance)
+    {
+        while (distance > 0)
+        {
+            float deltaDistance = _movingSpeed * Time.deltaTime;
+            transform.Translate(direction * deltaDistance);
+            distance -= deltaDistance;
+            yield return null;
+        }
+    }
+
 }

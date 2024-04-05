@@ -30,7 +30,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 8
+  m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1526950264945825681
 MonoBehaviour:
@@ -45,5 +45,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _template: {fileID: 4105332646320626635, guid: b0242af63215dfe44b5464b1d401b60b, type: 3}
-  _spawnZoneWidth: 4
+  _spawnZoneWidth: 20
   _spawnPeriodicity: 20
