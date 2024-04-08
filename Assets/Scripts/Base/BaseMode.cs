@@ -2,10 +2,20 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(BaseController), typeof(BaseView))]
 public abstract class BaseMode : MonoBehaviour
 {
     [SerializeField] protected Base Base;
     [SerializeField] protected int Price;
+
+    private BaseView _view;
+    private BaseController _controller;
+
+    private void Awake()
+    {
+        _view = GetComponent<BaseView>();
+        _controller = GetComponent<BaseController>();
+    }
 
     private void OnEnable()
     {
@@ -23,7 +33,11 @@ public abstract class BaseMode : MonoBehaviour
     {
         if(mineralCount >= Price)
         {
-            Base.SpendMinerals(Price);            
+            Base.SpendMinerals(Price);
+
+            if(_controller.IsClicked)
+                _view.InfoPanel.SetMineralCount(Base.MineralsCount);
+
             Execute();
         }
     }

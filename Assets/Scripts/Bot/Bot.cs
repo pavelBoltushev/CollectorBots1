@@ -81,8 +81,7 @@ public class Bot : MonoBehaviour
         yield return StartCoroutine(_mover.MoveTo(mineral.transform));
         yield return StartCoroutine(_mover.MoveTo(_base.transform));
         yield return StartCoroutine(_mover.MoveReverse());
-
-       
+               
         if (_targetMinerals.Count != 0)
             _targetMinerals.Dequeue();        
 

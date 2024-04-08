@@ -3,26 +3,26 @@ using UnityEngine;
 using System.Linq;
 using System;
 
-[RequireComponent(typeof(BaseView), typeof(BotBuildingMode), typeof(ColonizationMode))]
+[RequireComponent(typeof(BaseController), typeof(BaseView))]
+[RequireComponent(typeof(BotBuildingMode), typeof(ColonizationMode))]
 public class Base : MonoBehaviour
 {    
-    [SerializeField] private Level _level;
-    [SerializeField] private Flag _flagTemplate;
-    [SerializeField] private float _minDistanceForFlag;
+    [SerializeField] private Level _level;    
     [SerializeField] private List<Transform> _botSlots;    
-    [SerializeField] private BaseInfoPanel _infoPanel;
 
     private List<Bot> _bots;
     private List<Mineral> _minerals;
     private bool[] _isSlotHasBot;
-    private BotBuildingMode _botBuildingMode;
-    private ColonizationMode _colonizationMode;
-    private BaseView _baseView;
+    private List<BaseMode> _availableModes;
+    private BaseView _view;
+    private BaseController _controller;
 
-    public Flag Flag { get; private set; }   
+    public Flag Flag { get; set; }   
     public Level Level => _level;
-    public BaseInfoPanel InfoPanel => _infoPanel;
-
+    public int MineralsCount => _minerals.Count;
+    public BaseInfoPanel InfoPanel => _view.InfoPanel;
+    public Mode CurrentMode { get; private set; }
+    
     public event Action<int> MineralCountChanged;
     public event Action<string> ModeChanged;
 
@@ -31,15 +31,16 @@ public class Base : MonoBehaviour
         _bots = new List<Bot>();
         _minerals = new List<Mineral>();
         _isSlotHasBot = new bool[_botSlots.Count];
-        _botBuildingMode = GetComponent<BotBuildingMode>();
-        _colonizationMode = GetComponent<ColonizationMode>();
-        _baseView = GetComponent<BaseView>();
+        _availableModes = new List<BaseMode>();
+        _availableModes.Add(GetComponent<BotBuildingMode>());
+        _availableModes.Add(GetComponent<ColonizationMode>());
+        _view = GetComponent<BaseView>();
+        _controller = GetComponent<BaseController>();
     }
 
     private void Start()
-    {        
-        _botBuildingMode.enabled = true;
-        _colonizationMode.enabled = false;
+    {
+        Set(Mode.BotBuilding);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -47,7 +48,7 @@ public class Base : MonoBehaviour
         if (other.TryGetComponent(out Mineral mineral))
         {
             _minerals.Add(mineral);
-            MineralCountChanged(_minerals.Count);
+            MineralCountChanged?.Invoke(_minerals.Count);
         }
     }
 
@@ -56,7 +57,7 @@ public class Base : MonoBehaviour
         if (other.TryGetComponent(out Mineral mineral))
         {
             _minerals.Remove(mineral);
-            MineralCountChanged(_minerals.Count);
+            MineralCountChanged?.Invoke(_minerals.Count);
         }
     }
     
@@ -64,9 +65,8 @@ public class Base : MonoBehaviour
     {
         SetLevel(level);        
         AddBot(builderBot);
-        _infoPanel = infoPanel;        
-        _botBuildingMode.enabled = true;
-        _colonizationMode.enabled = false;
+        _view.SetInfoPanel(infoPanel);
+        Set(Mode.BotBuilding);
     }
 
     public void SetLevel(Level level)
@@ -92,8 +92,8 @@ public class Base : MonoBehaviour
 
         if(IsThereFreeSlot() == false)
         {
-            _botBuildingMode.enabled = false;
-            ModeChanged(GetModeTypeText());
+            Set(Mode.Standby);
+            ModeChanged?.Invoke(GetModeTypeText());
         }
     }
 
@@ -111,7 +111,7 @@ public class Base : MonoBehaviour
             _minerals.Remove(mineral);
             _level.RemoveMineral(mineral);
             Destroy(mineral.gameObject);
-        }              
+        }                    
     }
 
     public Bot GetBotForColonization()
@@ -120,48 +120,14 @@ public class Base : MonoBehaviour
         {
             if (bot.IsFree)
             {
-                _botBuildingMode.enabled = true;
-                _colonizationMode.enabled = false;
+                Set(Mode.BotBuilding);
                 ModeChanged(GetModeTypeText());
                 return bot;
             }
         }
 
         return null;
-    }
-
-    public void OnClicked()
-    {
-        _baseView.Mark();
-        _infoPanel.On();
-        _infoPanel.SetMineralCount(_minerals.Count);
-        _infoPanel.SetModeTypeText(GetModeTypeText());
-        MineralCountChanged += _infoPanel.SetMineralCount;
-        ModeChanged += _infoPanel.SetModeTypeText;
-    }
-
-    public void OnUnclicked()
-    {
-        _baseView.Unmark();
-        _infoPanel.Off();
-        MineralCountChanged -= _infoPanel.SetMineralCount;
-        ModeChanged -= _infoPanel.SetModeTypeText;
-    }
-
-    public void StandFlag(Vector3 position)
-    {
-        if(Vector3.Distance(transform.position, position) > _minDistanceForFlag)
-        {
-            _botBuildingMode.enabled = false;
-            _colonizationMode.enabled = true;
-            ModeChanged(GetModeTypeText());
-
-            if (Flag != null)
-                Destroy(Flag.gameObject);
-
-            Flag = Instantiate(_flagTemplate, position, Quaternion.identity);             
-        }
-    }      
+    }    
 
     public void ClearAllBotsTargets()
     {
@@ -170,7 +136,66 @@ public class Base : MonoBehaviour
             bot.ClearTargets();
         }
     }
-    
+
+    public void Set(Mode mode)
+    {
+        CurrentMode = mode;
+        _view.InfoPanel.SetModeTypeText(GetModeTypeText());
+
+        switch (mode)
+        {
+            case Mode.BotBuilding:
+
+                foreach (var item in _availableModes)
+                {
+                    if (item is BotBuildingMode)
+                        item.enabled = true;
+                    else
+                        item.enabled = false;
+                }
+                
+                break;
+
+            case Mode.Colonization:
+
+                foreach (var item in _availableModes)
+                {
+                    if (item is ColonizationMode)
+                        item.enabled = true;
+                    else
+                        item.enabled = false;
+                }
+                
+                break;
+
+            case Mode.Standby:
+
+                foreach (var item in _availableModes)
+                {
+                    item.enabled = false;
+                }
+                
+                break;
+        }   
+    }
+
+    public string GetModeTypeText()
+    {
+        switch (CurrentMode)
+        {
+            case Mode.BotBuilding:
+                return "Строительство";
+                
+            case Mode.Colonization:
+                return "Колонизация";
+                
+            case Mode.Standby:
+                return "Накопление";                
+        }
+
+        return "";
+    }
+
     private bool IsThereFreeSlot()
     {       
         for (int i = 0; i < _isSlotHasBot.Length; i++)
@@ -207,15 +232,12 @@ public class Base : MonoBehaviour
         }
 
         return false;
-    }
+    }     
+}
 
-    private string GetModeTypeText()
-    {
-        if (_botBuildingMode.enabled == true)
-            return "Строительство";
-        else if (_colonizationMode.enabled == true)
-            return "Колонизация";
-        else
-            return "Накопление";
-    }
+public enum Mode
+{
+    BotBuilding,
+    Colonization,
+    Standby
 }

@@ -4,7 +4,7 @@ public class MouseInputHandler : MonoBehaviour
 {
     [SerializeField] private Camera _camera;
 
-    private Base _clickedBase;
+    private BaseController _clickedBase;
 
     private void Update()
     {
@@ -18,7 +18,7 @@ public class MouseInputHandler : MonoBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            if (hit.collider.gameObject.TryGetComponent(out Base clickedBase))
+            if (hit.collider.gameObject.TryGetComponent(out BaseController clickedBase))
             {
                 if (_clickedBase == clickedBase)
                 {
